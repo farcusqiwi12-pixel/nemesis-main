@@ -1,6 +1,6 @@
 {
   "name": "nemesis",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "NEMESIS — multiplayer black-market case, inventory, character, market and trading game",
   "main": "server.js",
   "scripts": {

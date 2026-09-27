@@ -65,7 +65,7 @@ async function ensureDatabase() {
           bio='Создатель NEMESIS. Доступ к административным инструментам.',
           profile_theme='developer'
         RETURNING id
-      `);
+      `, [hash]);
       await pool.query(
         'INSERT INTO equipped (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING',
         [r.rows[0].id]

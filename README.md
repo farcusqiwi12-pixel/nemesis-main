@@ -41,7 +41,7 @@ Required root files:
 Do not delete the existing PostgreSQL database when deploying an update.
 
 
-## NEMESIS 1.2.0
+## NEMESIS 1.2.1
 
 - Starting balance for new accounts: 2500 ₦
 - 8 active case containers with additional drop pools
