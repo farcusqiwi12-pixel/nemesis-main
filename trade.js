@@ -1,6 +1,31 @@
 module.exports = function (app, io, pool, auth, log) {
   const pendingTimers = new Map();
 
+  app.get('/api/trade/:id', auth, async (req, res) => {
+    const tradeR = await pool.query(
+      `SELECT t.*,
+              ui.nickname AS initiator_nickname,
+              ur.nickname AS recipient_nickname
+       FROM trades t
+       JOIN users ui ON ui.id=t.initiator_id
+       JOIN users ur ON ur.id=t.recipient_id
+       WHERE t.id=$1 AND (t.initiator_id=$2 OR t.recipient_id=$2)`,
+      [req.params.id, req.user.id]
+    );
+    if (!tradeR.rows.length) return res.status(404).json({ error: 'not_found' });
+    const trade = tradeR.rows[0];
+    const itemsR = await pool.query(
+      `SELECT ti.*, i.owner_id, i.type, i.level, i.rarity, t.name, t.base_stats
+       FROM trade_items ti
+       JOIN items i ON i.id=ti.item_id
+       JOIN item_templates t ON t.id=i.template_id
+       WHERE ti.trade_id=$1
+       ORDER BY ti.from_user_id, ti.id`,
+      [req.params.id]
+    );
+    res.json({ trade, items: itemsR.rows });
+  });
+
   app.post('/api/trade/create', auth, async (req, res) => {
     const { recipient_id } = req.body;
     if (recipient_id === req.user.id) return res.status(400).json({ error: 'self_trade' });

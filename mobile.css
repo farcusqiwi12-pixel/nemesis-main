@@ -1,55 +1,13 @@
-@media (max-width: 768px) {
-  .topbar { margin: 8px; padding: 10px 14px; }
-  .logo-small { font-size: 14px; }
-  .user-nick { display: none; }
-
-  .tabs { margin: 8px; padding: 4px; gap: 2px; }
-  .tab-btn { padding: 8px 10px; font-size: 12px; }
-
-  .content { padding: 0 8px 24px; }
-
-  .cases-grid, .inventory-grid, .market-grid {
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 10px;
-  }
-
-  .item-card { padding: 8px; }
-  .item-name { font-size: 12px; }
-
-  .inventory-filters, .market-toolbar {
-    flex-direction: column;
-    padding: 10px;
-  }
-  .inventory-filters select, .market-toolbar input, .market-toolbar select {
-    width: 100%;
-  }
-
-  .character-panel { flex-direction: column; padding: 14px; }
-  .character-viewport { width: 100%; max-width: 240px; height: 320px; }
-
-  .trade-panel { grid-template-columns: 1fr; padding: 12px; gap: 10px; }
-  .trade-drop-zone { min-height: 100px; }
-
-  .auth-panel { width: 90vw; max-width: 340px; padding: 20px; }
-  .logo { font-size: 26px; }
-
-  .modal { width: 88vw; max-width: 320px; }
-}
-
-@media (max-width: 420px) {
-  .tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  .tab-btn { flex: 0 0 auto; }
-  .cases-grid, .inventory-grid, .market-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-.item-card, .equip-slot, .tab-btn, .btn-primary, .btn-secondary {
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
-}
-
-.trade-drop-zone.drag-over {
-  border-color: var(--neon-cyan);
-  background: rgba(0, 229, 255, 0.08);
+@media(max-width:640px){
+  .topbar{height:62px;padding:0 12px}.tabs{top:62px;padding:6px 8px;overflow-x:auto}.tab-btn{white-space:nowrap;padding:10px 11px;font-size:10px}.tab-btn span{display:none}
+  .brand-sub{display:none}.balance-label{display:none}.balance-box{padding-right:7px}.user-chip{display:none}.content{width:calc(100% - 20px);padding-top:14px}
+  .dashboard-strip{gap:7px;margin-bottom:18px}.dash-card{min-height:72px;padding:11px}.dash-card:nth-child(2),.dash-card:nth-child(3){display:none}.daily-card .btn-small{font-size:10px}
+  .section-heading{align-items:start}.section-heading h2{font-size:26px}.section-heading p{font-size:11px}.section-meta{display:none}
+  .cases-hero{padding:16px}.hero-signal{display:none}.hero-copy h3{font-size:15px}.cases-grid,.inventory-grid,.market-grid{grid-template-columns:1fr 1fr;gap:8px}
+  .case-card{min-height:205px;padding:11px}.case-visual{height:86px}.case-box{width:58px;height:44px}.case-name{font-size:12px}.case-price{font-size:11px}
+  .inventory-filters,.market-toolbar{grid-template-columns:1fr 1fr}.inventory-filters input,.market-toolbar input{grid-column:1/-1}
+  .character-panel{min-height:450px}.character-viewport{min-height:350px}.character-viewport svg{max-height:340px}.stat-grid{grid-template-columns:1fr 1fr}
+  .trade-panel{padding:15px}.trade-sides{grid-template-columns:1fr}.trade-search{grid-template-columns:1fr}.trade-confirm-bar{flex-direction:column;align-items:stretch}
+  .profile-stats{grid-template-columns:1fr 1fr}.item-detail{grid-template-columns:1fr}
+  .auth-layout{width:min(94vw,390px)}.auth-copy{display:none}.auth-panel{padding:22px}
 }

@@ -3,166 +3,186 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>NEMESIS</title>
+<meta name="theme-color" content="#070a10">
+<title>NEMESIS — Black Market</title>
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="mobile.css">
 </head>
 <body>
+<div class="noise"></div>
+<div id="toast-root" class="toast-root"></div>
 
-<div id="auth-screen" class="screen">
-  <div class="glass-panel auth-panel">
-    <h1 class="logo">NEMESIS</h1>
-    <div class="auth-tabs">
-      <button class="auth-tab active" data-form="login">Вход</button>
-      <button class="auth-tab" data-form="register">Регистрация</button>
+<div id="auth-screen" class="screen auth-screen">
+  <div class="auth-backdrop"></div>
+  <div class="auth-layout">
+    <section class="auth-copy">
+      <div class="eyebrow">PRIVATE BLACK MARKET · ONLINE</div>
+      <h1 class="logo">NEMESIS<span>.</span></h1>
+      <p>Открывай кейсы. Собирай снаряжение. Торгуй. Рискуй.</p>
+      <div class="auth-features">
+        <span>◈ КЕЙСЫ</span><span>◈ ИНВЕНТАРЬ</span><span>◈ МАРКЕТ</span><span>◈ ОБМЕН</span>
+      </div>
+    </section>
+    <div class="glass-panel auth-panel">
+      <div class="panel-kicker">ACCESS TERMINAL</div>
+      <div class="auth-tabs">
+        <button class="auth-tab active" data-form="login">Вход</button>
+        <button class="auth-tab" data-form="register">Регистрация</button>
+      </div>
+      <form id="login-form" class="auth-form active">
+        <label>Никнейм<input autocomplete="username" type="text" id="login-nick" placeholder="Ваш никнейм" required></label>
+        <label>Пароль<input autocomplete="current-password" type="password" id="login-pass" placeholder="••••••••" required></label>
+        <button type="submit" class="btn-primary btn-wide">Войти в NEMESIS <span>→</span></button>
+        <div class="auth-error" id="login-error"></div>
+      </form>
+      <form id="register-form" class="auth-form">
+        <label>Никнейм<input autocomplete="username" type="text" id="reg-nick" placeholder="3–16 символов" maxlength="16" required></label>
+        <label>Пароль<input autocomplete="new-password" type="password" id="reg-pass" placeholder="Минимум 6 символов" required></label>
+        <button type="submit" class="btn-primary btn-wide">Создать аккаунт <span>→</span></button>
+        <div class="auth-error" id="register-error"></div>
+      </form>
+      <div class="auth-note">Данные аккаунта хранятся на сервере NEMESIS.</div>
     </div>
-    <form id="login-form" class="auth-form active">
-      <input type="text" id="login-nick" placeholder="Никнейм" required>
-      <input type="password" id="login-pass" placeholder="Пароль" required>
-      <button type="submit" class="btn-primary">Войти</button>
-      <div class="auth-error" id="login-error"></div>
-    </form>
-    <form id="register-form" class="auth-form">
-      <input type="text" id="reg-nick" placeholder="Никнейм (3-16 символов)" required>
-      <input type="password" id="reg-pass" placeholder="Пароль" required>
-      <button type="submit" class="btn-primary">Создать аккаунт</button>
-      <div class="auth-error" id="register-error"></div>
-    </form>
   </div>
 </div>
 
 <div id="app-screen" class="screen hidden">
-  <header class="topbar glass-panel">
-    <div class="logo-small">NEMESIS</div>
-    <div class="user-balance">
-      <span id="balance-value">0</span>
-      <span class="currency-icon">₦</span>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">N</div>
+      <div><div class="logo-small">NEMESIS<span>.</span></div><div class="brand-sub">BLACK MARKET</div></div>
     </div>
-    <div class="user-nick" id="user-nick"></div>
+    <div class="topbar-center">
+      <div class="online-pill"><i></i><span id="online-value">—</span> онлайн</div>
+      <button class="icon-btn" id="refresh-btn" title="Обновить">↻</button>
+    </div>
+    <div class="user-area">
+      <div class="balance-box"><span class="balance-label">БАЛАНС</span><strong id="balance-value">0</strong><span class="currency-icon">₦</span></div>
+      <div class="user-chip"><span class="avatar-dot">◆</span><span id="user-nick"></span></div>
+      <button class="icon-btn danger" id="logout-top-btn" title="Выйти">↪</button>
+    </div>
   </header>
 
-  <nav class="tabs glass-panel">
-    <button class="tab-btn active" data-tab="cases">Кейсы</button>
-    <button class="tab-btn" data-tab="inventory">Инвентарь</button>
-    <button class="tab-btn" data-tab="character">Персонаж</button>
-    <button class="tab-btn" data-tab="market">Маркет</button>
-    <button class="tab-btn" data-tab="trade">Обмен</button>
-    <button class="tab-btn" data-tab="profile">Профиль</button>
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="cases"><span>▣</span> Кейсы</button>
+    <button class="tab-btn" data-tab="inventory"><span>◈</span> Инвентарь</button>
+    <button class="tab-btn" data-tab="character"><span>♙</span> Персонаж</button>
+    <button class="tab-btn" data-tab="market"><span>₦</span> Маркет</button>
+    <button class="tab-btn" data-tab="trade"><span>⇄</span> Обмен</button>
+    <button class="tab-btn" data-tab="profile"><span>◎</span> Профиль</button>
   </nav>
 
   <main class="content">
+    <section class="dashboard-strip">
+      <div class="dash-card daily-card" id="daily-card">
+        <div class="dash-icon">✦</div>
+        <div class="dash-main"><span class="dash-label">ЕЖЕДНЕВНАЯ НАГРАДА</span><strong>+100 ₦</strong><small id="daily-status">Забери награду сегодня</small></div>
+        <button id="daily-reward-btn" class="btn-primary btn-small">Забрать</button>
+      </div>
+      <div class="dash-card">
+        <div class="dash-icon">◇</div>
+        <div class="dash-main"><span class="dash-label">КЕЙСОВ ОТКРЫТО</span><strong id="dash-cases">0</strong><small>твоя статистика</small></div>
+      </div>
+      <div class="dash-card">
+        <div class="dash-icon">◫</div>
+        <div class="dash-main"><span class="dash-label">СОСТОЯНИЕ</span><strong id="dash-state">ГОТОВ</strong><small>сервер NEMESIS</small></div>
+      </div>
+    </section>
+
     <section id="tab-cases" class="tab-content active">
+      <div class="section-heading">
+        <div><div class="section-kicker">RISK / REWARD</div><h2>Кейсы</h2><p>Открывай контейнеры и собирай коллекцию снаряжения.</p></div>
+        <div class="section-meta">3 контейнера</div>
+      </div>
+      <div class="cases-hero glass-panel">
+        <div class="hero-copy"><span class="hero-tag">NEMESIS DROP SYSTEM</span><h3>Твой следующий дроп уже внутри.</h3><p>Редкость предмета определяется содержимым выбранного кейса. Дубликаты можно отправить на маркет.</p></div>
+        <div class="hero-signal"><div class="signal-ring"></div><span>LIVE</span></div>
+      </div>
       <div class="cases-grid" id="cases-grid"></div>
     </section>
 
     <section id="tab-inventory" class="tab-content">
+      <div class="section-heading"><div><div class="section-kicker">YOUR LOADOUT</div><h2>Инвентарь</h2><p>Собирай набор и экипируй лучшие предметы.</p></div><div class="section-meta" id="inventory-count">0 предметов</div></div>
       <div class="inventory-filters glass-panel">
-        <select id="filter-type">
-          <option value="">Все типы</option>
-          <option value="armor">Броня</option>
-          <option value="weapon">Оружие</option>
-          <option value="backpack">Рюкзак</option>
-        </select>
-        <select id="filter-rarity">
-          <option value="">Вся редкость</option>
-          <option value="common">Common</option>
-          <option value="uncommon">Uncommon</option>
-          <option value="rare">Rare</option>
-          <option value="epic">Epic</option>
-          <option value="legendary">Legendary</option>
-        </select>
-        <select id="sort-inventory">
-          <option value="new">Новизна</option>
-          <option value="level">Уровень</option>
-          <option value="rarity">Редкость</option>
-          <option value="price">Цена</option>
-        </select>
+        <input id="inventory-search" type="search" placeholder="Поиск предмета...">
+        <select id="filter-type"><option value="">Все типы</option><option value="armor">Броня</option><option value="weapon">Оружие</option><option value="backpack">Рюкзак</option></select>
+        <select id="filter-rarity"><option value="">Вся редкость</option><option value="common">Common</option><option value="uncommon">Uncommon</option><option value="rare">Rare</option><option value="epic">Epic</option><option value="legendary">Legendary</option></select>
+        <select id="sort-inventory"><option value="new">Новизна</option><option value="level">Уровень</option><option value="rarity">Редкость</option></select>
       </div>
       <div class="inventory-grid" id="inventory-grid"></div>
     </section>
 
     <section id="tab-character" class="tab-content">
-      <div class="character-panel glass-panel">
-        <div class="character-viewport" id="character-viewport"></div>
-        <div class="equip-slots">
-          <div class="equip-slot" data-slot="helmet">Шлем</div>
-          <div class="equip-slot" data-slot="chest">Торс</div>
-          <div class="equip-slot" data-slot="legs">Ноги</div>
-          <div class="equip-slot" data-slot="weapon">Оружие</div>
-          <div class="equip-slot" data-slot="backpack">Рюкзак</div>
+      <div class="section-heading"><div><div class="section-kicker">LOADOUT</div><h2>Персонаж</h2><p>Текущее снаряжение и суммарные характеристики.</p></div></div>
+      <div class="character-layout">
+        <div class="character-panel glass-panel">
+          <div class="character-top"><span>ACTIVE LOADOUT</span><span id="character-power">POWER 0</span></div>
+          <div class="character-viewport" id="character-viewport"></div>
+        </div>
+        <div class="loadout-side">
+          <div class="stat-grid" id="character-stats"></div>
+          <div class="equip-panel glass-panel">
+            <div class="panel-title">Слоты</div>
+            <div class="equip-slots">
+              <button class="equip-slot" data-slot="helmet"><span>01</span><b>Шлем</b><em>—</em></button>
+              <button class="equip-slot" data-slot="chest"><span>02</span><b>Торс</b><em>—</em></button>
+              <button class="equip-slot" data-slot="legs"><span>03</span><b>Ноги</b><em>—</em></button>
+              <button class="equip-slot" data-slot="weapon"><span>04</span><b>Оружие</b><em>—</em></button>
+              <button class="equip-slot" data-slot="backpack"><span>05</span><b>Рюкзак</b><em>—</em></button>
+            </div>
+          </div>
         </div>
       </div>
     </section>
 
     <section id="tab-market" class="tab-content">
+      <div class="section-heading"><div><div class="section-kicker">PLAYER ECONOMY</div><h2>Маркет</h2><p>Покупай и продавай снаряжение игроков.</p></div><div class="section-meta">5% комиссия</div></div>
       <div class="market-toolbar glass-panel">
-        <input type="text" id="market-search" placeholder="Поиск предмета...">
-        <select id="market-sort">
-          <option value="price_asc">Цена ↑</option>
-          <option value="price_desc">Цена ↓</option>
-          <option value="new">Новизна</option>
-        </select>
+        <input type="search" id="market-search" placeholder="Поиск по названию...">
+        <select id="market-type"><option value="">Все типы</option><option value="armor">Броня</option><option value="weapon">Оружие</option><option value="backpack">Рюкзак</option></select>
+        <select id="market-rarity"><option value="">Все редкости</option><option value="common">Common</option><option value="uncommon">Uncommon</option><option value="rare">Rare</option><option value="epic">Epic</option><option value="legendary">Legendary</option></select>
+        <select id="market-sort"><option value="new">Новые</option><option value="price_asc">Цена ↑</option><option value="price_desc">Цена ↓</option></select>
       </div>
       <div class="market-grid" id="market-grid"></div>
     </section>
 
     <section id="tab-trade" class="tab-content">
+      <div class="section-heading"><div><div class="section-kicker">PLAYER TO PLAYER</div><h2>Обмен</h2><p>Без посредников: предметы и валюта переходят напрямую между игроками.</p></div></div>
       <div class="trade-panel glass-panel">
         <div id="trade-invite-panel">
-          <h3>Обмен</h3>
-          <p class="muted">Найдите игрока по никнейму и отправьте приглашение.</p>
-          <div class="trade-search">
-            <input type="text" id="trade-search-input" placeholder="Никнейм игрока..." maxlength="16">
-            <button id="trade-search-btn" class="btn-primary">Найти</button>
-          </div>
+          <div class="trade-empty-icon">⇄</div>
+          <h3>Начать обмен</h3><p class="muted">Найдите игрока по никнейму и отправьте приглашение.</p>
+          <div class="trade-search"><input type="text" id="trade-search-input" placeholder="Никнейм игрока..." maxlength="16"><button id="trade-search-btn" class="btn-primary">Найти</button></div>
           <div id="trade-search-results"></div>
         </div>
-
         <div id="trade-active-panel" class="hidden">
-          <div class="trade-header">
-            <h3 id="trade-opponent-label">Обмен</h3>
-            <button id="trade-cancel-btn" class="btn-secondary">Отменить</button>
-          </div>
+          <div class="trade-header"><div><span class="section-kicker">LIVE TRADE</span><h3 id="trade-opponent-label">Обмен</h3></div><button id="trade-cancel-btn" class="btn-secondary">Отменить</button></div>
           <div class="trade-sides">
-            <div class="trade-side" id="trade-my-side">
-              <h3>Ваши предметы</h3>
-              <div class="trade-drop-zone" id="trade-my-items">
-                <span class="muted">Перетащите предметы из инвентаря</span>
-              </div>
-              <input type="number" id="trade-my-currency" placeholder="Валюта" min="0" step="1">
-              <button id="trade-offer-btn" class="btn-primary">Обновить предложение</button>
-            </div>
-            <div class="trade-side" id="trade-their-side">
-              <h3>Предметы партнёра</h3>
-              <div class="trade-drop-zone" id="trade-their-items"></div>
-              <div id="trade-their-currency" class="trade-currency"></div>
-            </div>
+            <div class="trade-side"><div class="trade-side-head"><h3>Ваше предложение</h3><span id="trade-my-confirm">НЕ ГОТОВО</span></div><div class="trade-drop-zone" id="trade-my-items"><span class="muted">Перетащите предметы сюда</span></div><input type="number" id="trade-my-currency" placeholder="Валюта" min="0" step="1"><button id="trade-offer-btn" class="btn-primary">Обновить предложение</button></div>
+            <div class="trade-side"><div class="trade-side-head"><h3>Предложение партнёра</h3><span id="trade-their-confirm">ОЖИДАНИЕ</span></div><div class="trade-drop-zone" id="trade-their-items"></div><div id="trade-their-currency" class="trade-currency"></div></div>
           </div>
-          <div class="trade-confirm-bar">
-            <button id="trade-confirm-btn" class="btn-primary" disabled>Подтвердить</button>
-            <div id="trade-timer"></div>
-          </div>
+          <div class="trade-confirm-bar"><button id="trade-confirm-btn" class="btn-primary" disabled>Подтвердить обмен</button><div id="trade-timer"></div></div>
         </div>
       </div>
     </section>
 
     <section id="tab-profile" class="tab-content">
-      <div class="profile-panel glass-panel">
-        <div id="profile-stats"></div>
-        <button id="logout-btn" class="btn-secondary">Выйти</button>
+      <div class="section-heading"><div><div class="section-kicker">ACCOUNT</div><h2>Профиль</h2><p>Статистика аккаунта и состояние прогресса.</p></div></div>
+      <div class="profile-layout">
+        <div class="profile-hero glass-panel"><div class="profile-avatar">N</div><div><span class="section-kicker">OPERATIVE</span><h3 id="profile-nickname">—</h3><p id="profile-status">Аккаунт активен</p></div></div>
+        <div class="profile-stats glass-panel" id="profile-stats"></div>
+        <div class="profile-actions glass-panel"><button id="daily-reward-profile" class="btn-secondary">Получить ежедневную награду</button><button id="logout-btn" class="btn-secondary danger-btn">Выйти из аккаунта</button></div>
       </div>
     </section>
   </main>
 </div>
 
-<div id="modal-overlay" class="modal-overlay hidden">
-  <div class="modal glass-panel" id="modal-content"></div>
-</div>
+<div id="modal-overlay" class="modal-overlay hidden"><div class="modal glass-panel" id="modal-content"></div></div>
 
-<audio id="sfx-roulette" src="sounds/roulette.mp3" preload="auto"></audio>
-<audio id="sfx-drop" src="sounds/drop.mp3" preload="auto"></audio>
-<audio id="sfx-equip" src="sounds/equip.mp3" preload="auto"></audio>
-<audio id="sfx-trade" src="sounds/trade.mp3" preload="auto"></audio>
+<audio id="sfx-roulette" src="sounds/roulette.wav" preload="auto"></audio>
+<audio id="sfx-drop" src="sounds/drop.wav" preload="auto"></audio>
+<audio id="sfx-equip" src="sounds/equip.wav" preload="auto"></audio>
+<audio id="sfx-trade" src="sounds/trade.wav" preload="auto"></audio>
 
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <script src="sounds.js"></script>
@@ -170,7 +190,6 @@
 <script src="roulette.js"></script>
 <script src="inventory.js"></script>
 <script src="market.js"></script>
-<script src="trade.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

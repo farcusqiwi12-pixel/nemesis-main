@@ -219,7 +219,7 @@ app.post('/api/cases/:id/open', auth, async (req, res) => {
 
 app.get('/api/inventory', auth, async (req, res) => {
   const r = await pool.query(
-    `SELECT i.*, t.name, t.icon_url, t.model_url FROM items i
+    `SELECT i.*, t.name, t.icon_url, t.model_url, t.base_stats FROM items i
      JOIN item_templates t ON t.id=i.template_id
      WHERE i.owner_id=$1 ORDER BY i.created_at DESC`,
     [req.user.id]
@@ -247,6 +247,17 @@ app.post('/api/inventory/:itemId/unequip', auth, async (req, res) => {
   await pool.query(`UPDATE equipped SET ${slot}=NULL, updated_at=now() WHERE user_id=$1`, [userId]);
   await log(userId, 'unequip', { item_id: req.params.itemId, slot });
   res.json({ ok: true });
+});
+
+app.get('/api/daily-reward/status', auth, async (req, res) => {
+  const r = await pool.query(
+    `SELECT EXISTS(
+       SELECT 1 FROM daily_rewards
+       WHERE user_id=$1 AND claimed_at::date=now()::date
+     ) AS claimed`,
+    [req.user.id]
+  );
+  res.json({ claimed: Boolean(r.rows[0]?.claimed) });
 });
 
 app.post('/api/daily-reward', auth, async (req, res) => {
@@ -283,6 +294,20 @@ app.get('/api/me', auth, async (req, res) => {
   );
   if (!r.rows.length) return res.status(404).json({ error: 'not_found' });
   res.json(r.rows[0]);
+});
+
+app.get('/api/users/search', auth, async (req, res) => {
+  const nickname = String(req.query.nickname || '').trim();
+  if (nickname.length < 2) return res.json([]);
+  const r = await pool.query(
+    `SELECT id, nickname, is_premium
+     FROM users
+     WHERE id <> $1 AND nickname ILIKE $2
+     ORDER BY nickname ASC
+     LIMIT 8`,
+    [req.user.id, `%${nickname}%`]
+  );
+  res.json(r.rows);
 });
 
 app.get('/api/equipped', auth, async (req, res) => {
