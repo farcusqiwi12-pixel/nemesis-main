@@ -268,19 +268,20 @@ const App = (() => {
 
   async function openCase(caseObj) {
     if (Roulette.isSpinning()) return;
-    try { await loadMe(); } catch {}
 
-    const balance = Number(currentUser?.balance || 0);
-    const price = Number(caseObj.price || 0);
-    if (balance < price) {
-      const need = Math.max(0, price - balance);
-      toast(`Недостаточно средств: нужно ещё ${need.toLocaleString('ru-RU')} ₦`, 'error');
-      return;
-    }
+    // The server is authoritative for balance. Do not block a case here using
+    // a potentially stale client-side balance (important after login/developer
+    // account updates or when another tab changes the balance).
+    try { await loadMe(); } catch {}
 
     document.getElementById('dash-state').textContent = 'ПОДГОТОВКА…';
     try {
       const result = await api(`/api/cases/${caseObj.id}/open`, { method: 'POST' });
+      if (result.balance !== undefined) {
+        currentUser.balance = Number(result.balance);
+        const balanceEl = document.getElementById('balance-value');
+        if (balanceEl) balanceEl.textContent = Number(result.balance).toLocaleString('ru-RU');
+      }
       await loadMe();
 
       await Roulette.openChest(

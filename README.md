@@ -50,3 +50,11 @@ Do not delete the existing PostgreSQL database when deploying an update.
 - Player market remains available for custom pricing
 - Idempotent `upgrade.sql` runs during bootstrap without deleting existing player data
 - Optional developer account is created by setting `DEVELOPER_PASSWORD` in the Render environment
+
+## v1.2.2 — Case opening balance fix
+
+- Fixed a false `Недостаточно средств` message caused by a stale client-side balance.
+- Case purchases are now validated authoritatively by PostgreSQL/server state.
+- The server returns the new balance immediately after a successful case opening.
+- The displayed balance is refreshed after opening a case.
+- This is especially important for the NEMESIS_DEV account and for sessions opened in multiple browser tabs.

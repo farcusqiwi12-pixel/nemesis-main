@@ -212,9 +212,11 @@ app.post('/api/cases/:id/open', auth, async (req, res) => {
       suggestedBase[tmpl.rarity] || 50,
       Number(tmpl.level || 1) * (suggestedBase[tmpl.rarity] || 50) / 2
     ));
+    const balanceR = await client.query('SELECT balance FROM users WHERE id=$1', [userId]);
     res.json({
       item: { ...newItem, name: tmpl.name, icon_url: tmpl.icon_url, suggested_price },
-      was_duplicate: wasDuplicate
+      was_duplicate: wasDuplicate,
+      balance: balanceR.rows[0]?.balance ?? 0
     });
   } catch (e) {
     await client.query('ROLLBACK');
