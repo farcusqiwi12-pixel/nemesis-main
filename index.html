@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>NEMESIS</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="mobile.css">
+</head>
+<body>
+
+<div id="auth-screen" class="screen">
+  <div class="glass-panel auth-panel">
+    <h1 class="logo">NEMESIS</h1>
+    <div class="auth-tabs">
+      <button class="auth-tab active" data-form="login">Вход</button>
+      <button class="auth-tab" data-form="register">Регистрация</button>
+    </div>
+    <form id="login-form" class="auth-form active">
+      <input type="text" id="login-nick" placeholder="Никнейм" required>
+      <input type="password" id="login-pass" placeholder="Пароль" required>
+      <button type="submit" class="btn-primary">Войти</button>
+      <div class="auth-error" id="login-error"></div>
+    </form>
+    <form id="register-form" class="auth-form">
+      <input type="text" id="reg-nick" placeholder="Никнейм (3-16 символов)" required>
+      <input type="password" id="reg-pass" placeholder="Пароль" required>
+      <button type="submit" class="btn-primary">Создать аккаунт</button>
+      <div class="auth-error" id="register-error"></div>
+    </form>
+  </div>
+</div>
+
+<div id="app-screen" class="screen hidden">
+  <header class="topbar glass-panel">
+    <div class="logo-small">NEMESIS</div>
+    <div class="user-balance">
+      <span id="balance-value">0</span>
+      <span class="currency-icon">₦</span>
+    </div>
+    <div class="user-nick" id="user-nick"></div>
+  </header>
+
+  <nav class="tabs glass-panel">
+    <button class="tab-btn active" data-tab="cases">Кейсы</button>
+    <button class="tab-btn" data-tab="inventory">Инвентарь</button>
+    <button class="tab-btn" data-tab="character">Персонаж</button>
+    <button class="tab-btn" data-tab="market">Маркет</button>
+    <button class="tab-btn" data-tab="trade">Обмен</button>
+    <button class="tab-btn" data-tab="profile">Профиль</button>
+  </nav>
+
+  <main class="content">
+    <section id="tab-cases" class="tab-content active">
+      <div class="cases-grid" id="cases-grid"></div>
+    </section>
+
+    <section id="tab-inventory" class="tab-content">
+      <div class="inventory-filters glass-panel">
+        <select id="filter-type">
+          <option value="">Все типы</option>
+          <option value="armor">Броня</option>
+          <option value="weapon">Оружие</option>
+          <option value="backpack">Рюкзак</option>
+        </select>
+        <select id="filter-rarity">
+          <option value="">Вся редкость</option>
+          <option value="common">Common</option>
+          <option value="uncommon">Uncommon</option>
+          <option value="rare">Rare</option>
+          <option value="epic">Epic</option>
+          <option value="legendary">Legendary</option>
+        </select>
+        <select id="sort-inventory">
+          <option value="new">Новизна</option>
+          <option value="level">Уровень</option>
+          <option value="rarity">Редкость</option>
+          <option value="price">Цена</option>
+        </select>
+      </div>
+      <div class="inventory-grid" id="inventory-grid"></div>
+    </section>
+
+    <section id="tab-character" class="tab-content">
+      <div class="character-panel glass-panel">
+        <div class="character-viewport" id="character-viewport"></div>
+        <div class="equip-slots">
+          <div class="equip-slot" data-slot="helmet">Шлем</div>
+          <div class="equip-slot" data-slot="chest">Торс</div>
+          <div class="equip-slot" data-slot="legs">Ноги</div>
+          <div class="equip-slot" data-slot="weapon">Оружие</div>
+          <div class="equip-slot" data-slot="backpack">Рюкзак</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-market" class="tab-content">
+      <div class="market-toolbar glass-panel">
+        <input type="text" id="market-search" placeholder="Поиск предмета...">
+        <select id="market-sort">
+          <option value="price_asc">Цена ↑</option>
+          <option value="price_desc">Цена ↓</option>
+          <option value="new">Новизна</option>
+        </select>
+      </div>
+      <div class="market-grid" id="market-grid"></div>
+    </section>
+
+    <section id="tab-trade" class="tab-content">
+      <div class="trade-panel glass-panel">
+        <div id="trade-invite-panel">
+          <h3>Обмен</h3>
+          <p class="muted">Найдите игрока по никнейму и отправьте приглашение.</p>
+          <div class="trade-search">
+            <input type="text" id="trade-search-input" placeholder="Никнейм игрока..." maxlength="16">
+            <button id="trade-search-btn" class="btn-primary">Найти</button>
+          </div>
+          <div id="trade-search-results"></div>
+        </div>
+
+        <div id="trade-active-panel" class="hidden">
+          <div class="trade-header">
+            <h3 id="trade-opponent-label">Обмен</h3>
+            <button id="trade-cancel-btn" class="btn-secondary">Отменить</button>
+          </div>
+          <div class="trade-sides">
+            <div class="trade-side" id="trade-my-side">
+              <h3>Ваши предметы</h3>
+              <div class="trade-drop-zone" id="trade-my-items">
+                <span class="muted">Перетащите предметы из инвентаря</span>
+              </div>
+              <input type="number" id="trade-my-currency" placeholder="Валюта" min="0" step="1">
+              <button id="trade-offer-btn" class="btn-primary">Обновить предложение</button>
+            </div>
+            <div class="trade-side" id="trade-their-side">
+              <h3>Предметы партнёра</h3>
+              <div class="trade-drop-zone" id="trade-their-items"></div>
+              <div id="trade-their-currency" class="trade-currency"></div>
+            </div>
+          </div>
+          <div class="trade-confirm-bar">
+            <button id="trade-confirm-btn" class="btn-primary" disabled>Подтвердить</button>
+            <div id="trade-timer"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-profile" class="tab-content">
+      <div class="profile-panel glass-panel">
+        <div id="profile-stats"></div>
+        <button id="logout-btn" class="btn-secondary">Выйти</button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="modal-overlay" class="modal-overlay hidden">
+  <div class="modal glass-panel" id="modal-content"></div>
+</div>
+
+<audio id="sfx-roulette" src="sounds/roulette.mp3" preload="auto"></audio>
+<audio id="sfx-drop" src="sounds/drop.mp3" preload="auto"></audio>
+<audio id="sfx-equip" src="sounds/equip.mp3" preload="auto"></audio>
+<audio id="sfx-trade" src="sounds/trade.mp3" preload="auto"></audio>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script src="sounds.js"></script>
+<script src="character.js"></script>
+<script src="roulette.js"></script>
+<script src="inventory.js"></script>
+<script src="market.js"></script>
+<script src="trade.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
