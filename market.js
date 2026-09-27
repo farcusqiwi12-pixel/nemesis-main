@@ -1,8 +1,8 @@
 module.exports = function (app, pool, auth, log) {
   app.get('/api/market/listings', auth, async (req, res) => {
-    const { search, sort, type, rarity } = req.query;
+    const { search, sort, type, rarity, min_power, max_power, min_condition } = req.query;
     let query = `
-      SELECT ml.*, i.type, i.level, i.rarity, t.name, t.icon_url, u.nickname as seller_nickname
+      SELECT ml.*, i.type, i.level, i.rarity, i.condition, i.market_value, t.name, t.icon_url, t.base_stats, u.nickname as seller_nickname
       FROM market_listings ml
       JOIN items i ON i.id = ml.item_id
       JOIN item_templates t ON t.id = i.template_id
@@ -22,7 +22,12 @@ module.exports = function (app, pool, auth, log) {
       params.push(rarity);
       query += ` AND i.rarity = $${params.length}`;
     }
-    if (sort === 'price_asc') query += ' ORDER BY ml.price ASC';
+    if (min_power) { params.push(Number(min_power)); query += ` AND COALESCE((t.base_stats->>'power')::numeric,0) >= $${params.length}`; }
+    if (max_power) { params.push(Number(max_power)); query += ` AND COALESCE((t.base_stats->>'power')::numeric,0) <= $${params.length}`; }
+    if (min_condition) { params.push(Number(min_condition)); query += ` AND i.condition >= $${params.length}`; }
+    if (sort === 'power_desc') query += " ORDER BY COALESCE((t.base_stats->>'power')::numeric,0) DESC";
+    else if (sort === 'condition_desc') query += ' ORDER BY i.condition DESC';
+    else if (sort === 'price_asc') query += ' ORDER BY ml.price ASC';
     else if (sort === 'price_desc') query += ' ORDER BY ml.price DESC';
     else query += ' ORDER BY ml.created_at DESC';
 

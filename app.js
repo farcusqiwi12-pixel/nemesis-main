@@ -74,7 +74,7 @@ const App = (() => {
       duplicate_item:'Один предмет нельзя передать дважды',
       item_no_longer_owned:'Один из предметов больше вам не принадлежит',
       not_found:'Объект не найден',
-      server_error:'Серверная ошибка. Попробуйте ещё раз',
+      server_error:'Серверная ошибка. Попробуйте ещё раз', wrong_slot:'Этот предмет нельзя экипировать в выбранный слот', max_upgrade:'Предмет уже улучшен до максимума', contract_incomplete:'Контракт ещё не выполнен', already_claimed:'Уже получено', run_active:'У вас уже есть активный Black Run', empty_loadout:'Сначала соберите Loadout', bad_risk:'Неизвестный уровень риска', not_enough_resources:'Недостаточно ресурсов',
     };
     return map[code] || 'Не удалось выполнить действие';
   }
@@ -122,6 +122,8 @@ const App = (() => {
     if (tab === 'inventory') await loadInventory();
     if (tab === 'market') await loadMarket();
     if (tab === 'profile') await loadProfile();
+    if (tab === 'blackrun') await loadBlackRun();
+    if (tab === 'progress') await loadProgress();
     if (tab === 'character') await loadEquipped();
     if (tab === 'trade' && activeTradeId) await loadTrade(activeTradeId);
   }
@@ -149,7 +151,7 @@ const App = (() => {
   }
 
   function rarityColor(r) {
-    return ({ common:'#9aa5b5', uncommon:'#46d58a', rare:'#4aa8ff', epic:'#c56cff', legendary:'#ffbf55' })[r] || '#9aa5b5';
+    return ({ common:'#9aa5b5', uncommon:'#46d58a', rare:'#4aa8ff', epic:'#c56cff', legendary:'#ffbf55', nemesis:'#ff334f' })[r] || '#9aa5b5';
   }
 
   async function loadDailyReward() {
@@ -445,6 +447,17 @@ const App = (() => {
     if (level) level.textContent = Number(me.level || 1);
   }
 
+  let selectedRisk='low';
+  async function loadProgress(){
+    try{const p=await api('/api/progression');document.getElementById('prog-level').textContent=p.level||1;document.getElementById('prog-xp').textContent=Number(p.xp||0).toLocaleString('ru-RU');document.getElementById('prog-heat').textContent=p.heat||0;const contracts=await api('/api/contracts');const cr=document.getElementById('contracts-list');cr.innerHTML='';contracts.forEach(c=>{const el=document.createElement('div');el.className='contract-card';el.innerHTML=`<div><b>${esc(c.title)}</b><span>${c.kind.toUpperCase()} · ${c.progress}/${c.target}</span></div><button class="btn-small ${c.claimed?'disabled':''}" ${c.claimed||c.progress<c.target?'disabled':''}>${c.claimed?'CLAIMED':'CLAIM'}</button>`;el.querySelector('button').onclick=async()=>{try{await api('/api/contracts/'+c.id+'/claim',{method:'POST'});toast('Контракт выполнен');loadProgress();loadMe()}catch(e){toast(errorText(e.error),'error')}};cr.appendChild(el)});const a=await api('/api/achievements');const ar=document.getElementById('achievements-list');ar.innerHTML='';a.forEach(x=>{const el=document.createElement('div');el.className=`achievement-card ${x.unlocked_at?'unlocked':''}`;el.innerHTML=`<span>${esc(x.icon)}</span><div><b>${esc(x.title)}</b><small>${esc(x.description)}</small></div><em>${x.unlocked_at?'UNLOCKED':'LOCKED'}</em>`;ar.appendChild(el)})}catch(e){toast(errorText(e.error),'error')}}
+  async function loadBlackRun(){
+    try{const p=await api('/api/progression');document.getElementById('br-value').textContent=Number(p.loadout_value||0).toLocaleString('ru-RU')+' ₦';document.getElementById('br-power').textContent=p.loadout_power||0;document.getElementById('br-heat').textContent=p.heat||0;const active=await api('/api/black-run/status');renderBlackRun(active)}catch(e){toast(errorText(e.error),'error')}
+  }
+  function renderBlackRun(run){const active=!!run;document.getElementById('br-enter').disabled=active;['br-scavenge','br-hunt','br-extract','br-abandon'].forEach(id=>document.getElementById(id).disabled=!active);document.getElementById('br-status').textContent=active?'RUN ACTIVE':'NO ACTIVE RUN';document.getElementById('br-risk-label').textContent=active?String(run.risk).toUpperCase():'—';document.getElementById('br-loot-value').textContent=Number(run?.loot_value||0).toLocaleString('ru-RU')+' ₦';const list=document.getElementById('br-loot-list');const loot=Array.isArray(run?.loot)?run.loot:[];list.innerHTML=loot.length?loot.map(x=>`<div><b>${esc(x.name)}</b><span>${esc(x.rarity)}</span><strong>+${Number(x.value).toLocaleString('ru-RU')} ₦</strong></div>`).join(''):'<span class="muted">Здесь появится добыча.</span>';}
+  function raidFeed(msg){const el=document.createElement('div');el.textContent=`[${new Date().toLocaleTimeString()}] ${msg}`;document.getElementById('br-feed').prepend(el)}
+  function initBlackRun(){document.querySelectorAll('.risk-card').forEach(b=>b.onclick=()=>{document.querySelectorAll('.risk-card').forEach(x=>x.classList.remove('active'));b.classList.add('active');selectedRisk=b.dataset.risk});document.getElementById('br-enter').onclick=async()=>{try{const run=await api('/api/black-run/enter',{method:'POST',body:JSON.stringify({risk:selectedRisk})});renderBlackRun(run);raidFeed('BLACK RUN начат. Найди добычу и не задерживайся.');}catch(e){toast(errorText(e.error),'error')}};document.getElementById('br-scavenge').onclick=async()=>{try{const r=await api('/api/black-run/'+await activeRunId()+'/scavenge',{method:'POST'});raidFeed(`CACHE: ${r.item.name} · +${Number(r.item.value).toLocaleString('ru-RU')} ₦`);loadBlackRun()}catch(e){toast(errorText(e.error),'error')}};document.getElementById('br-hunt').onclick=async()=>{try{const r=await api('/api/black-run/'+await activeRunId()+'/hunt',{method:'POST'});raidFeed(r.success?`PVP: цель устранена · +${Number(r.reward).toLocaleString('ru-RU')} ₦`:'PVP: тебя устранили. Рейд потерян.');loadBlackRun();loadMe()}catch(e){toast(errorText(e.error),'error')}};document.getElementById('br-extract').onclick=async()=>{try{const r=await api('/api/black-run/'+await activeRunId()+'/extract',{method:'POST'});toast(`EXTRACTION COMPLETE · +${Number(r.value).toLocaleString('ru-RU')} ₦`);raidFeed('Успешная эвакуация. Добыча отправлена в Inventory.');loadBlackRun();loadInventory();loadMe()}catch(e){toast(errorText(e.error),'error')}};document.getElementById('br-abandon').onclick=async()=>{try{await api('/api/black-run/'+await activeRunId()+'/abandon',{method:'POST'});raidFeed('Рейд оставлен.');loadBlackRun()}catch(e){toast(errorText(e.error),'error')}}}
+  async function activeRunId(){const r=await api('/api/black-run/status');if(!r)throw{error:'not_found'};return r.id}
+
   async function loadProfile() {
     const me = await api('/api/me');
     renderProfile(me);
@@ -615,7 +628,7 @@ const App = (() => {
   function debounce(fn,ms){let t;return(...args)=>{clearTimeout(t);t=setTimeout(()=>fn(...args),ms)}}
 
   async function init() {
-    initAuthForms(); initTabs(); initInventoryFilters(); initMarketControls(); await initTrade(); initModal();
+    initAuthForms(); initTabs(); initInventoryFilters(); initMarketControls(); await initTrade(); initModal(); initBlackRun();
     document.getElementById('logout-btn').addEventListener('click',logout);
     document.getElementById('logout-top-btn').addEventListener('click',logout);
     document.getElementById('daily-reward-btn').addEventListener('click',claimDailyReward);

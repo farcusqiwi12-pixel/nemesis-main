@@ -1,7 +1,8 @@
 const Inventory = (() => {
   let items = [];
-  const RARITY_ORDER = { common:1, uncommon:2, rare:3, epic:4, legendary:5 };
+  const RARITY_ORDER = { common:1, uncommon:2, rare:3, epic:4, legendary:5, nemesis:6 };
   const TYPE_LABEL = { armor:'Броня', weapon:'Оружие', backpack:'Рюкзак' };
+  const RARITY_COLOR={common:'#9aa5b5',uncommon:'#46d58a',rare:'#4aa8ff',epic:'#c56cff',legendary:'#ffbf55',nemesis:'#ff334f'};
   const TYPE_ICON = { armor:'⬢', weapon:'◈', backpack:'▣' };
 
   async function fetchInventory(token) {
@@ -17,6 +18,8 @@ const Inventory = (() => {
     if(type) out=out.filter(i=>i.type===type);
     if(rarity) out=out.filter(i=>i.rarity===rarity);
     if(sort==='level') out.sort((a,b)=>b.level-a.level);
+    else if(sort==='power') out.sort((a,b)=>Number((b.base_stats||{}).power||0)+Number((b.custom_stats||{}).upgrade_power||0)-Number((a.base_stats||{}).power||0)-Number((a.custom_stats||{}).upgrade_power||0));
+    else if(sort==='price') out.sort((a,b)=>Number(b.market_value||b.suggested_price||0)-Number(a.market_value||a.suggested_price||0));
     else if(sort==='rarity') out.sort((a,b)=>(RARITY_ORDER[b.rarity]||0)-(RARITY_ORDER[a.rarity]||0));
     else out.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
     return out;
@@ -35,7 +38,7 @@ const Inventory = (() => {
     card.draggable=true;
     card.addEventListener('dragstart',(e)=>e.dataTransfer.setData('text/item-id',item.id));
     const st=stats(item);
-    const statText=[st.damage&&`DMG ${st.damage}`,st.defense&&`DEF ${st.defense}`,st.slots&&`SLOTS ${st.slots}`].filter(Boolean).join(' · ');
+    const statText=[st.damage&&`DMG ${st.damage}`,st.defense&&`DEF ${st.defense}`,st.armor&&`ARM ${st.armor}`,st.power&&`PWR ${st.power}`,st.capacity&&`CAP ${st.capacity}`].filter(Boolean).join(' · ');
     card.innerHTML=`
       <div class="item-icon">
         ${item.icon_url?`<img src="${item.icon_url}" alt="" style="max-width:82%;max-height:82%;object-fit:contain">`:`<span class="type-symbol">${TYPE_ICON[item.type]||'◈'}</span>`}
@@ -80,6 +83,7 @@ const Inventory = (() => {
         <button class="btn-primary" id="modal-equip">Надеть</button>
         <button class="btn-secondary" id="modal-direct-sell">Продать · ${Number(item.suggested_price||100).toLocaleString('ru-RU')} ₦</button>
         <button class="btn-secondary" id="modal-sell">На маркет</button>
+        <button class="btn-secondary" id="modal-upgrade">Улучшить</button><button class="btn-secondary danger-btn" id="modal-dismantle">Разобрать</button>
         <button class="btn-secondary" id="modal-close">Закрыть</button>
       </div>`;
     overlay.classList.remove('hidden');
@@ -108,6 +112,8 @@ const Inventory = (() => {
         if(window.toast) toast(`Продано: +${Number(data.amount).toLocaleString('ru-RU')} ₦`);
       }catch(err){showError(err)}
     };
+    document.getElementById('modal-upgrade').onclick=async()=>{try{const r=await fetch(`/api/inventory/${item.id}/upgrade`,{method:'POST',headers:{Authorization:`Bearer ${localStorage.getItem('nemesis_token')}`}});const d=await r.json();if(!r.ok)throw d;overlay.classList.add('hidden');toast(`UPGRADE COMPLETE · -${Number(d.cost).toLocaleString('ru-RU')} ₦`);if(window.App)await App.refreshAfterSkin()}catch(e){showError(e)}};
+    document.getElementById('modal-dismantle').onclick=async()=>{if(!confirm(`Разобрать ${item.name}?`))return;try{const r=await fetch(`/api/inventory/${item.id}/dismantle`,{method:'POST',headers:{Authorization:`Bearer ${localStorage.getItem('nemesis_token')}`}});const d=await r.json();if(!r.ok)throw d;overlay.classList.add('hidden');toast(`DISMANTLE · METAL +${d.gain.metal} · PARTS +${d.gain.parts}`);if(window.App)await App.refreshAfterSkin()}catch(e){showError(e)}};
     document.getElementById('modal-sell').onclick=async()=>{
       const price=prompt('Цена на маркете (₦):',String(item.suggested_price||100));
       if(price===null)return;

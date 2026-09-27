@@ -30,7 +30,7 @@ app.get('/health', async (req, res) => {
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
-  max: 5,
+  max: Number(process.env.PG_POOL_MAX || 10), idleTimeoutMillis: 30000, connectionTimeoutMillis: 5000,
 });
 const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
   lazyConnect: true,
@@ -197,26 +197,31 @@ app.post('/api/cases/:id/open', auth, async (req, res) => {
     const newItem = newItemR.rows[0];
 
     await client.query(
-      'UPDATE users SET balance=balance-$1, cases_opened=cases_opened+1 WHERE id=$2',
+      'UPDATE users SET balance=balance-$1, total_spent=total_spent+$1, cases_opened=cases_opened+1 WHERE id=$2',
       [c.price, userId]
     );
+    if (app.locals.nemesisProgression) {
+      await app.locals.nemesisProgression.awardXp(client,userId,25,'case',newItem.id);
+      await app.locals.nemesisProgression.bumpContract(client,userId,'OPEN_3_CASES');
+      await app.locals.nemesisProgression.unlock(client,userId,'FIRST_CASE');
+      if (tmpl.rarity==='legendary') await app.locals.nemesisProgression.unlock(client,userId,'FIRST_LEGENDARY');
+      if (tmpl.rarity==='nemesis') await app.locals.nemesisProgression.unlock(client,userId,'NEMESIS_DROP');
+    }
     await client.query(
       'INSERT INTO case_openings (user_id, case_id, item_id, was_duplicate) VALUES ($1,$2,$3,$4)',
       [userId, caseId, newItem.id, wasDuplicate]
     );
+    await client.query('INSERT INTO logs(user_id,action,payload) VALUES($1,$2,$3)', [userId,'open_case',JSON.stringify({case_id:caseId,item_id:newItem.id,was_duplicate:wasDuplicate})]);
     await client.query('COMMIT');
-
-    await log(userId, 'open_case', { case_id: caseId, item_id: newItem.id, was_duplicate: wasDuplicate });
     const suggestedBase = { common: 50, uncommon: 150, rare: 350, epic: 900, legendary: 2500 };
     const suggested_price = Math.floor(Math.max(
       suggestedBase[tmpl.rarity] || 50,
       Number(tmpl.level || 1) * (suggestedBase[tmpl.rarity] || 50) / 2
     ));
-    const balanceR = await client.query('SELECT balance FROM users WHERE id=$1', [userId]);
     res.json({
       item: { ...newItem, name: tmpl.name, icon_url: tmpl.icon_url, suggested_price },
       was_duplicate: wasDuplicate,
-      balance: balanceR.rows[0]?.balance ?? 0
+      balance: Number(user.balance) - Number(c.price)
     });
   } catch (e) {
     await client.query('ROLLBACK');
@@ -229,13 +234,14 @@ app.post('/api/cases/:id/open', auth, async (req, res) => {
 
 app.get('/api/inventory', auth, async (req, res) => {
   const r = await pool.query(
-    `SELECT i.*, t.name, t.icon_url, t.model_url, t.base_stats,
+    `SELECT i.*, t.name, t.icon_url, t.model_url, t.base_stats, t.category, t.equip_slot, t.market_value AS template_market_value, t.weight,
        CASE i.rarity
          WHEN 'common' THEN GREATEST(50, i.level * 45)
          WHEN 'uncommon' THEN GREATEST(150, i.level * 90)
          WHEN 'rare' THEN GREATEST(350, i.level * 180)
          WHEN 'epic' THEN GREATEST(900, i.level * 420)
          WHEN 'legendary' THEN GREATEST(2500, i.level * 1100)
+         WHEN 'nemesis' THEN GREATEST(50000, i.level * 7000)
        END AS suggested_price
      FROM items i
      JOIN item_templates t ON t.id=i.template_id
@@ -250,8 +256,9 @@ app.post('/api/inventory/:itemId/equip', auth, async (req, res) => {
   const { slot } = req.body;
   const validSlots = ['helmet', 'chest', 'legs', 'weapon', 'backpack'];
   if (!validSlots.includes(slot)) return res.status(400).json({ error: 'bad_slot' });
-  const itemR = await pool.query("SELECT * FROM items WHERE id=$1 AND owner_id=$2 AND status='owned'", [req.params.itemId, userId]);
+  const itemR = await pool.query("SELECT i.*,t.equip_slot FROM items i JOIN item_templates t ON t.id=i.template_id WHERE i.id=$1 AND i.owner_id=$2 AND i.status='owned'", [req.params.itemId, userId]);
   if (!itemR.rows.length) return res.status(404).json({ error: 'not_found' });
+  if (itemR.rows[0].equip_slot !== slot) return res.status(400).json({ error: 'wrong_slot' });
   await pool.query(`UPDATE equipped SET ${slot}=$1, updated_at=now() WHERE user_id=$2`, [req.params.itemId, userId]);
   await log(userId, 'equip', { item_id: req.params.itemId, slot });
   res.json({ ok: true });
@@ -406,6 +413,8 @@ const { checkAutoKick } = require('./moderation')(app, pool, auth, requireAdmin,
 require('./logs')(app, pool, auth, requireAdmin);
 require('./market')(app, pool, auth, log);
 require('./trade')(app, io, pool, auth, log);
+require('./progression')(app, pool, auth, log);
+require('./blackrun')(app, pool, auth, log);
 
 io.use((socket, next) => {
   try {

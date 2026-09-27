@@ -69,6 +69,8 @@
     <button class="tab-btn" data-tab="character"><span>♙</span> Персонаж</button>
     <button class="tab-btn" data-tab="market"><span>₦</span> Маркет</button>
     <button class="tab-btn" data-tab="trade"><span>⇄</span> Обмен</button>
+    <button class="tab-btn" data-tab="blackrun"><span>⌁</span> Black Run</button>
+    <button class="tab-btn" data-tab="progress"><span>◆</span> Прогресс</button>
     <button class="tab-btn" data-tab="profile"><span>◎</span> Профиль</button>
   </nav>
 
@@ -106,8 +108,8 @@
       <div class="inventory-filters glass-panel">
         <input id="inventory-search" type="search" placeholder="Поиск предмета...">
         <select id="filter-type"><option value="">Все типы</option><option value="armor">Броня</option><option value="weapon">Оружие</option><option value="backpack">Рюкзак</option></select>
-        <select id="filter-rarity"><option value="">Вся редкость</option><option value="common">Common</option><option value="uncommon">Uncommon</option><option value="rare">Rare</option><option value="epic">Epic</option><option value="legendary">Legendary</option></select>
-        <select id="sort-inventory"><option value="new">Новизна</option><option value="level">Уровень</option><option value="rarity">Редкость</option></select>
+        <select id="filter-rarity"><option value="">Вся редкость</option><option value="common">Common</option><option value="uncommon">Uncommon</option><option value="rare">Rare</option><option value="epic">Epic</option><option value="legendary">Legendary</option><option value="nemesis">NEMESIS</option></select>
+        <select id="sort-inventory"><option value="new">Новизна</option><option value="level">Уровень</option><option value="rarity">Редкость</option><option value="price">Цена</option><option value="power">Power</option></select>
       </div>
       <div class="inventory-grid" id="inventory-grid"></div>
     </section>
@@ -140,8 +142,8 @@
       <div class="market-toolbar glass-panel">
         <input type="search" id="market-search" placeholder="Поиск по названию...">
         <select id="market-type"><option value="">Все типы</option><option value="armor">Броня</option><option value="weapon">Оружие</option><option value="backpack">Рюкзак</option></select>
-        <select id="market-rarity"><option value="">Все редкости</option><option value="common">Common</option><option value="uncommon">Uncommon</option><option value="rare">Rare</option><option value="epic">Epic</option><option value="legendary">Legendary</option></select>
-        <select id="market-sort"><option value="new">Новые</option><option value="price_asc">Цена ↑</option><option value="price_desc">Цена ↓</option></select>
+        <select id="market-rarity"><option value="">Все редкости</option><option value="common">Common</option><option value="uncommon">Uncommon</option><option value="rare">Rare</option><option value="epic">Epic</option><option value="legendary">Legendary</option><option value="nemesis">NEMESIS</option></select>
+        <select id="market-sort"><option value="new">Новые</option><option value="price_asc">Цена ↑</option><option value="price_desc">Цена ↓</option><option value="power_desc">Power ↓</option><option value="condition_desc">Состояние ↓</option></select>
       </div>
       <div class="market-grid" id="market-grid"></div>
     </section>
@@ -164,6 +166,30 @@
           <div class="trade-confirm-bar"><button id="trade-confirm-btn" class="btn-primary" disabled>Подтвердить обмен</button><div id="trade-timer"></div></div>
         </div>
       </div>
+    </section>
+
+    <section id="tab-blackrun" class="tab-content">
+      <div class="section-heading"><div><div class="section-kicker">RISK / EXTRACTION / PVP</div><h2>BLACK RUN</h2><p>Собери Loadout, войди в рейд, найди добычу и реши, когда пора уходить.</p></div><div class="section-meta">LIVE RAID SYSTEM</div></div>
+      <div class="blackrun-grid">
+        <div class="glass-panel blackrun-entry">
+          <div class="panel-kicker">ENTER RAID</div><h3>Чем выше риск — тем выше добыча.</h3>
+          <div class="risk-grid"><button data-risk="low" class="risk-card active"><b>LOW</b><span>+15% loot</span></button><button data-risk="medium" class="risk-card"><b>MEDIUM</b><span>+50% loot</span></button><button data-risk="high" class="risk-card"><b>HIGH</b><span>+110% loot</span></button><button data-risk="black" class="risk-card"><b>BLACK</b><span>+240% loot</span></button></div>
+          <div class="raid-metrics"><div><span>LOADOUT VALUE</span><b id="br-value">—</b></div><div><span>POWER</span><b id="br-power">—</b></div><div><span>HEAT</span><b id="br-heat">—</b></div><div><span>POTENTIAL</span><b id="br-potential">—</b></div></div>
+          <button id="br-enter" class="btn-primary btn-wide">ENTER BLACK RUN →</button>
+        </div>
+        <div class="glass-panel blackrun-active">
+          <div class="blackrun-live-head"><div><div class="panel-kicker">ACTIVE RAID</div><h3 id="br-status">NO ACTIVE RUN</h3></div><span id="br-risk-label">—</span></div>
+          <div class="raid-loot"><div class="raid-loot-head"><span>LOOT SECURED</span><strong id="br-loot-value">0 ₦</strong></div><div id="br-loot-list" class="raid-loot-list"><span class="muted">Здесь появится добыча.</span></div></div>
+          <div class="raid-actions"><button id="br-scavenge" class="btn-secondary">SEARCH CACHE</button><button id="br-hunt" class="btn-secondary">HUNT TARGET</button><button id="br-extract" class="btn-primary">EXTRACT</button><button id="br-abandon" class="btn-secondary danger-btn">ABANDON</button></div>
+          <div id="br-feed" class="raid-feed"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-progress" class="tab-content">
+      <div class="section-heading"><div><div class="section-kicker">PROGRESSION / CONTRACTS</div><h2>Прогресс</h2><p>Уровень, XP, контракты и достижения — без обязательного гринда.</p></div></div>
+      <div class="progress-top glass-panel"><div><span>LEVEL</span><strong id="prog-level">1</strong></div><div class="xp-bar"><i id="prog-xp-bar"></i></div><div><span>XP</span><strong id="prog-xp">0</strong></div><div><span>HEAT</span><strong id="prog-heat">0</strong></div></div>
+      <div class="progress-columns"><div><div class="panel-title">DAILY / WEEKLY CONTRACTS</div><div id="contracts-list" class="contract-list"></div></div><div><div class="panel-title">ACHIEVEMENTS</div><div id="achievements-list" class="achievement-list"></div></div></div>
     </section>
 
     <section id="tab-profile" class="tab-content">
