@@ -132,6 +132,12 @@ const App = (() => {
     document.getElementById('user-nick').textContent = currentUser.nickname;
     document.getElementById('dash-cases').textContent = Number(currentUser.cases_opened || 0).toLocaleString('ru-RU');
     document.getElementById('profile-nickname').textContent = currentUser.nickname;
+    const roleEl = document.getElementById('profile-role-tag');
+    if (roleEl) {
+      roleEl.textContent = currentUser.role_tag || (currentUser.is_admin ? 'Разработчик' : 'Игрок');
+      roleEl.className = `profile-role-tag ${currentUser.profile_theme === 'developer' ? 'developer' : ''}`;
+    }
+    document.body.classList.toggle('developer-session', currentUser.profile_theme === 'developer');
     return currentUser;
   }
 
@@ -197,8 +203,11 @@ const App = (() => {
   async function loadCases() {
     const cases = await api('/api/cases');
     const grid = document.getElementById('cases-grid');
+    const meta = document.querySelector('#tab-cases .section-meta');
+    if (meta) meta.textContent = `${cases.length} контейнеров`;
     grid.innerHTML = '';
-    const accents = ['var(--rare)','var(--epic)','var(--legendary)'];
+    const accents = ['var(--common)','var(--uncommon)','var(--rare)','var(--epic)','var(--legendary)'];
+
     cases.forEach((c, index) => {
       const accent = accents[index % accents.length];
       const card = document.createElement('article');
@@ -206,64 +215,96 @@ const App = (() => {
       card.style.setProperty('--rarity', accent);
       card.innerHTML = `
         <div class="case-glow"></div>
-        <div class="case-visual"><div class="case-box">N</div></div>
+        <div class="case-visual">
+          <div class="case-box">
+            <div class="case-box-lid"></div>
+            <span>N</span>
+          </div>
+        </div>
         <div>
           <div class="case-name">${esc(c.name)}</div>
-          <div class="case-hint">Открытие контейнера · риск / награда</div>
+          <div class="case-hint">Контейнер · вскрытие · дроп по редкости</div>
           <div class="case-price">${Number(c.price).toLocaleString('ru-RU')} ₦</div>
+          <button class="case-open-btn" type="button">ВСКРЫТЬ КОНТЕЙНЕР</button>
         </div>`;
       card.addEventListener('click', () => openCase(c));
+      card.querySelector('.case-open-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        openCase(c);
+      });
       grid.appendChild(card);
     });
-    if (!cases.length) grid.innerHTML = '<div class="empty-state"><strong>Кейсы недоступны</strong>Сервер не вернул активные контейнеры.</div>';
+
+    if (!cases.length) {
+      grid.innerHTML = '<div class="empty-state"><strong>Контейнеры недоступны</strong>Сервер не вернул активные контейнеры.</div>';
+    }
+  }
+
+  async function quickSellDrop(item) {
+    const result = await api(`/api/inventory/${item.id}/sell`, { method: 'POST' });
+    await loadMe();
+    await loadInventory();
+    Sounds.play('trade');
+    toast(`Продано: ${item.name} · +${Number(result.amount).toLocaleString('ru-RU')} ₦`);
+    return result;
+  }
+
+  async function listDropOnMarket(item) {
+    const suggested = Number(item.suggested_price || 100);
+    const price = prompt('Твоя цена на маркете (₦):', String(suggested));
+    if (price === null) return;
+    const numeric = Number(price);
+    if (!Number.isSafeInteger(numeric) || numeric <= 0) {
+      toast('Цена должна быть целым числом больше 0', 'error');
+      return;
+    }
+    await api('/api/market/listings', {
+      method: 'POST',
+      body: JSON.stringify({ item_id: item.id, price: numeric })
+    });
+    toast(`Предмет выставлен за ${numeric.toLocaleString('ru-RU')} ₦`);
+    await loadInventory();
   }
 
   async function openCase(caseObj) {
     if (Roulette.isSpinning()) return;
-    if (Number(currentUser.balance) < Number(caseObj.price)) {
-      toast('Недостаточно средств. Забери ежедневную награду.', 'error');
+    try { await loadMe(); } catch {}
+
+    const balance = Number(currentUser?.balance || 0);
+    const price = Number(caseObj.price || 0);
+    if (balance < price) {
+      const need = Math.max(0, price - balance);
+      toast(`Недостаточно средств: нужно ещё ${need.toLocaleString('ru-RU')} ₦`, 'error');
       return;
     }
-    const grid = document.getElementById('cases-grid');
-    const rouletteContainer = document.createElement('div');
-    rouletteContainer.style.cssText = 'grid-column:1/-1;width:100%;overflow:hidden;height:170px;margin-bottom:2px;border:1px solid #243440;background:#070c12;';
-    grid.parentElement.insertBefore(rouletteContainer, grid);
-    document.getElementById('dash-state').textContent = 'ОТКРЫТИЕ…';
+
+    document.getElementById('dash-state').textContent = 'ПОДГОТОВКА…';
     try {
-      const result = await api(`/api/cases/${caseObj.id}/open`, { method:'POST' });
+      const result = await api(`/api/cases/${caseObj.id}/open`, { method: 'POST' });
       await loadMe();
-      const pool = [
-        {name:result.item.name, rarity:result.item.rarity},
-        {name:'Случайный предмет',rarity:'common'},
-        {name:'Случайный предмет',rarity:'uncommon'},
-        {name:'Случайный предмет',rarity:'rare'},
-        {name:'Случайный предмет',rarity:'epic'},
-        {name:'Случайный предмет',rarity:'legendary'},
-      ];
-      Roulette.spin(rouletteContainer, pool, {name:result.item.name, rarity:result.item.rarity}, {
-        onComplete: async () => {
-          rouletteContainer.remove();
-          document.getElementById('dash-state').textContent = 'ГОТОВ';
-          Sounds.play('drop');
-          toast(`Получен предмет: ${result.item.name}`);
-          if (result.was_duplicate) {
-            Inventory.showDuplicatePopup(result.item,
-              async (item) => {
-                try {
-                  await api('/api/market/listings', {method:'POST',body:JSON.stringify({item_id:item.id,price:item.suggested_price||100})});
-                  toast('Дубликат выставлен на маркет');
-                  await loadInventory();
-                } catch (err) { toast(errorText(err.error),'error'); }
-              },
-              async () => { await loadInventory(); }
-            );
-          } else {
+
+      await Roulette.openChest(
+        {
+          ...result.item,
+          suggestedPrice: Number(result.item.suggested_price || 100)
+        },
+        {
+          suggestedPrice: Number(result.item.suggested_price || 100),
+          onSell: async (item) => {
+            await quickSellDrop(item);
+          },
+          onMarket: async (item) => {
+            await listDropOnMarket(item);
+          },
+          onComplete: async () => {
+            document.getElementById('dash-state').textContent = 'ГОТОВ';
+            Sounds.play('drop');
+            if (result.was_duplicate) toast('Дубликат предмета. Теперь его можно продать или выставить на маркет.');
             await loadInventory();
           }
         }
-      });
+      );
     } catch (err) {
-      rouletteContainer.remove();
       document.getElementById('dash-state').textContent = 'ГОТОВ';
       toast(errorText(err.error), 'error');
     }
@@ -389,11 +430,18 @@ const App = (() => {
   }
 
   function renderProfile(me) {
+    const isDev = me.profile_theme === 'developer' || me.is_admin;
     document.getElementById('profile-stats').innerHTML = `
+      <div class="profile-stat"><span>УРОВЕНЬ</span><strong>${Number(me.level || 1)}</strong></div>
       <div class="profile-stat"><span>БАЛАНС</span><strong>${Number(me.balance).toLocaleString('ru-RU')} ₦</strong></div>
-      <div class="profile-stat"><span>КЕЙСОВ ОТКРЫТО</span><strong>${me.cases_opened}</strong></div>
+      <div class="profile-stat"><span>КЕЙСОВ ОТКРЫТО</span><strong>${Number(me.cases_opened || 0).toLocaleString('ru-RU')}</strong></div>
+      <div class="profile-stat"><span>СТАТУС</span><strong>${isDev ? 'SYSTEM / ONLINE' : 'ONLINE'}</strong></div>
       <div class="profile-stat"><span>ПРЕМИУМ</span><strong>${me.is_premium ? 'АКТИВЕН' : 'НЕТ'}</strong></div>
-      <div class="profile-stat"><span>СТАТУС</span><strong>ONLINE</strong></div>`;
+      <div class="profile-stat"><span>РОЛЬ</span><strong>${esc(me.role_tag || 'Игрок')}</strong></div>`;
+    const bio = document.getElementById('profile-bio');
+    if (bio) bio.textContent = me.bio || 'Оперативник NEMESIS.';
+    const level = document.getElementById('profile-level');
+    if (level) level.textContent = Number(me.level || 1);
   }
 
   async function loadProfile() {

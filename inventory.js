@@ -78,6 +78,7 @@ const Inventory = (() => {
       </div>
       <div class="modal-actions">
         <button class="btn-primary" id="modal-equip">Надеть</button>
+        <button class="btn-secondary" id="modal-direct-sell">Продать · ${Number(item.suggested_price||100).toLocaleString('ru-RU')} ₦</button>
         <button class="btn-secondary" id="modal-sell">На маркет</button>
         <button class="btn-secondary" id="modal-close">Закрыть</button>
       </div>`;
@@ -91,6 +92,20 @@ const Inventory = (() => {
         await equipItem(item,slot);
         overlay.classList.add('hidden');
         await App.refreshAfterSkin();
+      }catch(err){showError(err)}
+    };
+    document.getElementById('modal-direct-sell').onclick=async()=>{
+      if(!confirm(`Продать ${item.name} сразу за ${Number(item.suggested_price||100).toLocaleString('ru-RU')} ₦?`))return;
+      try{
+        const res=await fetch(`/api/inventory/${item.id}/sell`,{
+          method:'POST',
+          headers:{Authorization:`Bearer ${localStorage.getItem('nemesis_token')}`}
+        });
+        const data=await res.json().catch(()=>({}));
+        if(!res.ok)throw data;
+        overlay.classList.add('hidden');
+        if(window.App) await App.refreshAfterSkin();
+        if(window.toast) toast(`Продано: +${Number(data.amount).toLocaleString('ru-RU')} ₦`);
       }catch(err){showError(err)}
     };
     document.getElementById('modal-sell').onclick=async()=>{

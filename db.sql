@@ -21,7 +21,11 @@ CREATE TABLE users (
     kicked_until TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    CONSTRAINT nickname_format CHECK (nickname ~ '^[A-Za-z0-9_]{3,16}$')
+    CONSTRAINT nickname_format CHECK (nickname ~ '^[A-Za-z0-9_]{3,16}$'),
+    level INTEGER NOT NULL DEFAULT 1 CHECK (level BETWEEN 1 AND 100),
+    role_tag VARCHAR(32) NOT NULL DEFAULT 'Игрок',
+    bio TEXT NOT NULL DEFAULT '',
+    profile_theme VARCHAR(32) NOT NULL DEFAULT 'operative'
 );
 
 CREATE TABLE skins (
@@ -85,7 +89,8 @@ CREATE TABLE items (
     type item_type NOT NULL,
     level SMALLINT NOT NULL CHECK (level BETWEEN 1 AND 10),
     rarity rarity_type NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    status VARCHAR(16) NOT NULL DEFAULT 'owned' CHECK (status IN ('owned','sold'))
 );
 
 CREATE INDEX idx_items_owner ON items(owner_id);

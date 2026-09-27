@@ -57,7 +57,7 @@ module.exports = function (app, io, pool, auth, log) {
       if (!balanceR.rows.length || balanceR.rows[0].balance < normalizedCurrency) throw { code: 'not_enough_balance' };
 
       for (const itemId of item_ids) {
-        const ownR = await client.query('SELECT id FROM items WHERE id=$1 AND owner_id=$2', [itemId, userId]);
+        const ownR = await client.query("SELECT id FROM items WHERE id=$1 AND owner_id=$2 AND status='owned'", [itemId, userId]);
         if (!ownR.rows.length) throw { code: 'not_owner', item_id: itemId };
       }
 

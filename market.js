@@ -39,7 +39,7 @@ module.exports = function (app, pool, auth, log) {
     try {
       await client.query('BEGIN');
       const itemR = await client.query(
-        'SELECT * FROM items WHERE id=$1 AND owner_id=$2 FOR UPDATE',
+        "SELECT * FROM items WHERE id=$1 AND owner_id=$2 AND status='owned' FOR UPDATE",
         [item_id, userId]
       );
       if (!itemR.rows.length) throw { code: 'not_owner' };
@@ -90,8 +90,8 @@ module.exports = function (app, pool, auth, log) {
       const listing = listR.rows[0];
       if (listing.seller_id === buyerId) throw { code: 'cant_buy_own' };
 
-      const ownerR = await client.query('SELECT owner_id FROM items WHERE id=$1 FOR UPDATE', [listing.item_id]);
-      if (!ownerR.rows.length || ownerR.rows[0].owner_id !== listing.seller_id) throw { code: 'listing_invalid' };
+      const ownerR = await client.query('SELECT owner_id, status FROM items WHERE id=$1 FOR UPDATE', [listing.item_id]);
+      if (!ownerR.rows.length || ownerR.rows[0].owner_id !== listing.seller_id || ownerR.rows[0].status !== 'owned') throw { code: 'listing_invalid' };
 
       const buyerR = await client.query('SELECT balance FROM users WHERE id=$1 FOR UPDATE', [buyerId]);
       if (buyerR.rows[0].balance < listing.price) throw { code: 'not_enough_balance' };

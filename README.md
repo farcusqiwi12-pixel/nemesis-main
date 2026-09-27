@@ -39,3 +39,14 @@ Required root files:
 - `server.js`
 
 Do not delete the existing PostgreSQL database when deploying an update.
+
+
+## NEMESIS 1.2.0
+
+- Starting balance for new accounts: 2500 ₦
+- 8 active case containers with additional drop pools
+- Cinematic container opening: no roulette/scrolling; lid unlocks and opens, then rarity glow reveals the item
+- Quick sell directly from a drop result and inventory
+- Player market remains available for custom pricing
+- Idempotent `upgrade.sql` runs during bootstrap without deleting existing player data
+- Optional developer account is created by setting `DEVELOPER_PASSWORD` in the Render environment

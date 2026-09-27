@@ -121,7 +121,7 @@ app.post('/api/register', async (req, res) => {
   const hash = await bcrypt.hash(password, 12);
   try {
     const r = await pool.query(
-      'INSERT INTO users (nickname, password_hash) VALUES ($1,$2) RETURNING id, nickname',
+      'INSERT INTO users (nickname, password_hash, balance) VALUES ($1,$2,2500) RETURNING id, nickname, balance',
       [nickname, hash]
     );
     await pool.query('INSERT INTO equipped (user_id) VALUES ($1)', [r.rows[0].id]);
@@ -207,7 +207,15 @@ app.post('/api/cases/:id/open', auth, async (req, res) => {
     await client.query('COMMIT');
 
     await log(userId, 'open_case', { case_id: caseId, item_id: newItem.id, was_duplicate: wasDuplicate });
-    res.json({ item: { ...newItem, name: tmpl.name, icon_url: tmpl.icon_url }, was_duplicate: wasDuplicate });
+    const suggestedBase = { common: 50, uncommon: 150, rare: 350, epic: 900, legendary: 2500 };
+    const suggested_price = Math.floor(Math.max(
+      suggestedBase[tmpl.rarity] || 50,
+      Number(tmpl.level || 1) * (suggestedBase[tmpl.rarity] || 50) / 2
+    ));
+    res.json({
+      item: { ...newItem, name: tmpl.name, icon_url: tmpl.icon_url, suggested_price },
+      was_duplicate: wasDuplicate
+    });
   } catch (e) {
     await client.query('ROLLBACK');
     const code = e.code || 'server_error';
@@ -219,9 +227,17 @@ app.post('/api/cases/:id/open', auth, async (req, res) => {
 
 app.get('/api/inventory', auth, async (req, res) => {
   const r = await pool.query(
-    `SELECT i.*, t.name, t.icon_url, t.model_url, t.base_stats FROM items i
+    `SELECT i.*, t.name, t.icon_url, t.model_url, t.base_stats,
+       CASE i.rarity
+         WHEN 'common' THEN GREATEST(50, i.level * 45)
+         WHEN 'uncommon' THEN GREATEST(150, i.level * 90)
+         WHEN 'rare' THEN GREATEST(350, i.level * 180)
+         WHEN 'epic' THEN GREATEST(900, i.level * 420)
+         WHEN 'legendary' THEN GREATEST(2500, i.level * 1100)
+       END AS suggested_price
+     FROM items i
      JOIN item_templates t ON t.id=i.template_id
-     WHERE i.owner_id=$1 ORDER BY i.created_at DESC`,
+     WHERE i.owner_id=$1 AND i.status='owned' ORDER BY i.created_at DESC`,
     [req.user.id]
   );
   res.json(r.rows);
@@ -232,7 +248,7 @@ app.post('/api/inventory/:itemId/equip', auth, async (req, res) => {
   const { slot } = req.body;
   const validSlots = ['helmet', 'chest', 'legs', 'weapon', 'backpack'];
   if (!validSlots.includes(slot)) return res.status(400).json({ error: 'bad_slot' });
-  const itemR = await pool.query('SELECT * FROM items WHERE id=$1 AND owner_id=$2', [req.params.itemId, userId]);
+  const itemR = await pool.query("SELECT * FROM items WHERE id=$1 AND owner_id=$2 AND status='owned'", [req.params.itemId, userId]);
   if (!itemR.rows.length) return res.status(404).json({ error: 'not_found' });
   await pool.query(`UPDATE equipped SET ${slot}=$1, updated_at=now() WHERE user_id=$2`, [req.params.itemId, userId]);
   await log(userId, 'equip', { item_id: req.params.itemId, slot });
@@ -247,6 +263,52 @@ app.post('/api/inventory/:itemId/unequip', auth, async (req, res) => {
   await pool.query(`UPDATE equipped SET ${slot}=NULL, updated_at=now() WHERE user_id=$1`, [userId]);
   await log(userId, 'unequip', { item_id: req.params.itemId, slot });
   res.json({ ok: true });
+});
+
+
+app.post('/api/inventory/:itemId/sell', auth, async (req, res) => {
+  const userId = req.user.id;
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const itemR = await client.query(
+      `SELECT i.*, t.name
+       FROM items i JOIN item_templates t ON t.id=i.template_id
+       WHERE i.id=$1 AND i.owner_id=$2 AND i.status='owned' FOR UPDATE`,
+      [req.params.itemId, userId]
+    );
+    if (!itemR.rows.length) throw { code: 'not_found' };
+
+    const equippedR = await client.query(
+      `SELECT 1 FROM equipped
+       WHERE user_id=$1 AND (helmet=$2 OR chest=$2 OR legs=$2 OR weapon=$2 OR backpack=$2)`,
+      [userId, req.params.itemId]
+    );
+    if (equippedR.rows.length) throw { code: 'item_equipped' };
+
+    const listedR = await client.query(
+      `SELECT 1 FROM market_listings WHERE item_id=$1 AND status='active'`,
+      [req.params.itemId]
+    );
+    if (listedR.rows.length) throw { code: 'already_listed' };
+
+    const item = itemR.rows[0];
+    const prices = { common: 50, uncommon: 150, rare: 350, epic: 900, legendary: 2500 };
+    const amount = Math.max(prices[item.rarity] || 50, Number(item.level || 1) * (prices[item.rarity] || 50) / 2);
+    const rounded = Math.floor(amount);
+
+    await client.query("UPDATE items SET status='sold' WHERE id=$1 AND owner_id=$2", [req.params.itemId, userId]);
+    await client.query('UPDATE users SET balance=balance+$1 WHERE id=$2', [rounded, userId]);
+    await client.query('COMMIT');
+
+    await log(userId, 'instant_sell', { item_id: req.params.itemId, amount: rounded });
+    res.json({ ok: true, amount: rounded, item_name: item.name });
+  } catch (e) {
+    await client.query('ROLLBACK');
+    res.status(400).json({ error: e.code || 'server_error' });
+  } finally {
+    client.release();
+  }
 });
 
 app.get('/api/daily-reward/status', auth, async (req, res) => {
@@ -289,7 +351,7 @@ app.post('/api/reports', auth, async (req, res) => {
 
 app.get('/api/me', auth, async (req, res) => {
   const r = await pool.query(
-    'SELECT id, nickname, balance, is_premium, cases_opened, reports_count FROM users WHERE id=$1',
+    'SELECT id, nickname, balance, is_premium, is_admin, cases_opened, reports_count, level, role_tag, bio, profile_theme FROM users WHERE id=$1',
     [req.user.id]
   );
   if (!r.rows.length) return res.status(404).json({ error: 'not_found' });
